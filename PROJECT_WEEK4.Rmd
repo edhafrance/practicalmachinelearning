@@ -1,0 +1,156 @@
+  ---
+title: "PROJECT_WEEK4"
+author: "Edward Ha"
+date: "3/4/2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+## Background
+  In this project, I will use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. 
+
+Six young health participants were asked to perform one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in five different fashions: exactly according to the specification (Class A), throwing the elbows to the front (Class B), lifting the dumbbell only halfway (Class C), lowering the dumbbell only halfway (Class D) and throwing the hips to the front (Class E).
+
+###The goal of this project:
+
+How can I predict the manner in which participants did the exercise. This is the "classe" variable in the training set?  
+
+. You may use any of the other variables to predict with. You should create a report describing how:
+1) You built your model.
+2) You used cross validation.
+3) You think the expected out of sample error is.
+4) Why you made the choices you did. 
+5) You will also use your prediction model to predict 20 different test cases.
+
+Apply your machine learning algorithm to the 20 test cases available in the test data above and submit your predictions in appropriate format to the Course Project Prediction Quiz for automated grading.
+
+
+```{r READ, include=FALSE}
+library(dplyr)
+library(caret)
+library(ggplot2)
+setwd("/Users/edwardha/Documents/COURSERA")
+training<-read.csv("pml-training.csv",na.strings=c("NA","#DIV/0!",""))
+testing<-read.csv("pml-testing.csv",na.strings=c("NA","#DIV/0!",""))
+
+
+```
+
+###How I buit the model.
+Step 1: Data Cleaning
+After looking at the data sets, there are some variables that have too many N/A.  Those variables will be removed from the dataset 
+```{r READ2, include=TRUE,echo=TRUE,message=FALSE}
+library(dplyr)
+library(reshape)
+library(reshape2)
+library(ggplot2)
+##Step1: Cleaning of the data
+training2<-training[, colSums(!is.na(training)) >2000]
+#Let's use the variables selected in training 2 + classe.  My goal is to plot variables and see if I can see a difference between classe A and the other classes.
+training3<-select(training2,classe,gyros_belt_x,gyros_belt_y,gyros_belt_z,roll_belt,pitch_belt,yaw_belt
+             ,accel_belt_x,accel_belt_y,accel_belt_z,magnet_belt_x,magnet_belt_y,magnet_belt_z,
+             magnet_arm_x,magnet_arm_y,magnet_arm_z,roll_dumbbell,pitch_dumbbell,yaw_dumbbell,
+             total_accel_dumbbell,gyros_dumbbell_x,gyros_dumbbell_y,gyros_dumbbell_z,accel_dumbbell_x,
+             accel_dumbbell_y,accel_dumbbell_z,magnet_dumbbell_x,magnet_dumbbell_y,magnet_dumbbell_z,
+             roll_forearm,pitch_forearm,yaw_forearm,total_accel_forearm,gyros_forearm_x,gyros_forearm_y,
+             gyros_forearm_z,accel_forearm_x,accel_forearm_y,accel_forearm_z,magnet_forearm_x,
+             magnet_forearm_y,magnet_forearm_z)
+
+training3[,-1]<-sapply(training3[,-1],as.numeric) #transform all the data into numeric.
+
+testing3<-select(testing,gyros_belt_x,gyros_belt_y,gyros_belt_z,roll_belt,pitch_belt,yaw_belt
+             ,accel_belt_x,accel_belt_y,accel_belt_z,magnet_belt_x,magnet_belt_y,magnet_belt_z,
+             magnet_arm_x,magnet_arm_y,magnet_arm_z,roll_dumbbell,pitch_dumbbell,yaw_dumbbell,
+             total_accel_dumbbell,gyros_dumbbell_x,gyros_dumbbell_y,gyros_dumbbell_z,accel_dumbbell_x,
+             accel_dumbbell_y,accel_dumbbell_z,magnet_dumbbell_x,magnet_dumbbell_y,magnet_dumbbell_z,
+             roll_forearm,pitch_forearm,yaw_forearm,total_accel_forearm,gyros_forearm_x,gyros_forearm_y,
+             gyros_forearm_z,accel_forearm_x,accel_forearm_y,accel_forearm_z,magnet_forearm_x,
+             magnet_forearm_y,magnet_forearm_z)
+
+testing3<-sapply(testing3,as.numeric) #transform all the data into numeric.
+
+
+mdata<-melt(training3,classe=c("classe"))
+
+mdata2<-mdata%>%group_by(classe,variable)%>%summarise(median(value))
+colnames(mdata2)<-c("classe","variable","median")
+cdata<-cast(mdata2,classe~variable,mean)
+write.csv(cdata,file="cdata.csv")
+write.csv(training3,file="cdata.csv")
+
+
+col.num1<-c("gyros_belt_x","gyros_belt_y","gyros_belt_z","roll_belt","pitch_belt","yaw_belt","accel_belt_x","accel_belt_y","accel_belt_z","magnet_belt_x","magnet_belt_y")
+
+col.num2<-c("magnet_belt_z","magnet_arm_x","magnet_arm_y","magnet_arm_z","roll_dumbbell","pitch_dumbbell","yaw_dumbbell","total_accel_dumbbell","gyros_dumbbell_x","gyros_dumbbell_y","gyros_dumbbell_z","accel_dumbbell_x")
+
+col.num3<-c("accel_dumbbell_y","accel_dumbbell_z","magnet_dumbbell_x","magnet_dumbbell_y","magnet_dumbbell_z","roll_forearm","pitch_forearm","yaw_forearm","total_accel_forearm","gyros_forearm_x","gyros_forearm_y","gyros_forearm_z","accel_forearm_x","accel_forearm_y","accel_forearm_z","magnet_forearm_x","magnet_forearm_y","magnet_forearm_z")
+
+mdata11<-mdata%>%filter(variable%in%col.num1)
+mdata12<-mdata%>%filter(variable%in%col.num2)
+mdata13<-mdata%>%filter(variable%in%col.num3)
+
+#ggplot(data=mdata11,aes(x=classe,y=value,color=classe))+geom_point()+facet_grid(.~variable)
+
+#ggplot(data=mdata12,aes(x=classe,y=value,color=classe))+geom_point()+facet_grid(.~variable)
+
+#ggplot(data=mdata13,aes(x=classe,y=value,color=classe))+geom_point()+facet_grid(.~variable)
+             
+```
+
+
+
+Step 2: Plots.
+I decided to observe the data provided.  I plotted different variables (3 sets to make it easier to visualize) and compare the classes.  I was hoping to see a clear distinction between the "Good" (Classe A) and the "Bad" (Other classes).  I am acknowledging that it is more complicated than just an observation of plots. 
+
+Plot1
+```{r PLOT1, include=TRUE,echo=TRUE,message=FALSE}
+ggplot(data=mdata11,aes(x=classe,y=value,color=classe))+geom_point()+facet_grid(.~variable)
+
+#I won't plot the other variablesm but the code is included below.
+#ggplot(data=mdata11,aes(x=classe,y=value,color=classe))+geom_point()+facet_grid(.~variable)
+
+#ggplot(data=mdata12,aes(x=classe,y=value,color=classe))+geom_point()+facet_grid(.~variable)
+
+#ggplot(data=mdata13,aes(x=classe,y=value,color=classe))+geom_point()+facet_grid(.~variable)
+```
+The variability seems to indicate that preprocessing will be needed.  The histogram below of magnet_belt_y, for instance, shows an example of one variable huge dispersion.
+
+```{r HISTO, include=TRUE,echo=TRUE,message=FALSE}
+histogram(training3$magnet_belt_y)
+```
+Because of the reasons mentioned above, we will use the caret package to do cross validation (separate the data into a training and testing set), and include the preprocess functionality.  
+
+Random Forrest seems to be a good option, given that it seems to be a perfect example of decision tree: deciding from a set of multiple variables whether it is a class A.  
+```{r PREPROCESS, include=TRUE,echo=TRUE,message=FALSE}
+set.seed(1235)
+inTrain<-createDataPartition(y=training3$classe,p=0.75,list=FALSE)
+
+subtraining<-training3[inTrain,]
+subtesting<-training3[-inTrain,]
+
+modelFit<-train(classe~.,preProcess=c("center","scale"),method="rf",data=subtraining)
+
+```
+
+
+Now, we can see the final model.  The data looks great with an error rate of 0.75%.  
+```{r FINALMODEL, include=TRUE,echo=TRUE,message=FALSE}
+modelFit$finalModel
+```
+
+
+
+The next step is the prediction step, and confusion matrix based on the testing data, a subset of training data called "subtesting"
+The data below shows, from the subtesting data, that the prediction works well.  You can see that accuracy is greater than 99% !!!!
+```{r PREDICTION, include=TRUE,echo=TRUE,message=FALSE}
+predictions<-predict(modelFit, newdata=subtesting)
+confusionMatrix(predictions,subtesting$classe)
+```
+
+
+Finally, we can predict the testing data.
+```{r TESTING, include=TRUE,echo=TRUE,message=FALSE}
+predict(modelFit, testing3)
+```
+
+
